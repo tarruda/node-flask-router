@@ -6,4 +6,7 @@ test:
 compile:
 	@./node_modules/.bin/coffee -o lib src
 
+link: test compile
+	npm link
+
 .PHONY: test
