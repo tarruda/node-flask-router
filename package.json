@@ -1,0 +1,27 @@
+{
+  "name": "connect-routers",
+  "version": "0.0.1",
+  "description": "Simple, fast and flexible routing system for connect.\nNice if you need routing middleware without all the other features exposed by express.",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "connect",
+    "routing",
+    "router",
+    "routers",
+    "dispatch",
+    "request"
+  ],
+  "author": "Thiago de Arruda",
+  "license": "BSD",
+  "dependencies": {
+    "connect": ">=2.4.0"
+  },
+  "devDependencies": {
+    "coffee-script": "1.3.3",
+    "should": "*",
+    "mocha": "*"
+  }
+}
