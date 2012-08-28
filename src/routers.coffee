@@ -90,14 +90,14 @@ class Compiler
             return null
         return rv
 
-      number: (str, opts) ->
+      float: (str, opts) ->
         str = str.trim()
         rv = parseFloat(str)
         if !isFinite(rv) || rv.toString() != str
           return null
         if opts
-          if (isFinite(opts.min) && rv < min) ||
-          (isFinite(opts.max) && rv > max)
+          if (isFinite(opts.min) && rv < opts.min) ||
+          (isFinite(opts.max) && rv > opts.max)
             return null
         return rv
 

@@ -96,6 +96,56 @@ describe 'Builtin string parser', ->
       .expect(404, done)
 
 
+describe 'Builtin path parser', ->
+  router = routers()
+  app = connect()
+  app.use(router.middleware)
+
+  router.get '/pages/<path:page>/edit', (req, res) ->
+    res.write(req.params.page)
+    res.end()
+
+  it 'should match normal strings', (done) ->
+    app.request()
+      .get('/pages/foo/edit')
+      .end (res) ->
+        res.body.should.eql('foo')
+        done()
+
+  it 'should match any number of path segments', (done) ->
+    app.request()
+      .get('/pages/abc/def/ghi/jkl/edit')
+      .end (res) ->
+        res.body.should.eql('abc/def/ghi/jkl')
+        done()
+
+
+describe 'Builtin float parser', ->
+  router = routers()
+  app = connect()
+  app.use(router.middleware)
+
+  router.post '/credit/<float(max=99.99,min=1):amount>', (req, res) ->
+    res.write(JSON.stringify(req.params.amount))
+    res.end()
+
+  it 'should match numbers inside range', (done) ->
+    app.request()
+      .post('/credit/55.3')
+      .end (res) ->
+        JSON.parse(res.body).should.eql(55.3)
+        done()
+
+  it 'should not match numbers outside range', (done) ->
+    app.request()
+      .get('/credit/99.999')
+      .expect 404, ->
+        app.request()
+          .get('/credit/0.999')
+          .expect(404, done)
+
+
+
 describe 'Builtin integer parser', ->
   router = routers()
   app = connect()
