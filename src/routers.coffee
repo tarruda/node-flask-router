@@ -4,6 +4,20 @@ url = require('url')
 
 escapeRegex = (s) -> s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
 
+
+# The most basic parameter parser, which ensures no slashes
+# in the string and can optionally validate string length.
+defaultParser = (str, opts) ->
+  if str.indexOf('/') != -1
+    return null
+  if opts
+    if (isFinite(opts.len) && str.length != opts.len) ||
+    (isFinite(opts.min) && str.length < opts.min) ||
+    (isFinite(opts.max) && str.length > opts.max)
+      return null
+  return str
+
+
 class RegexExtractor
   constructor: (@regex) ->
 
@@ -42,7 +56,10 @@ class RuleExtractor extends RegexExtractor
     extractedArgs = []
     for i in [1...m.length]
       param = params[i - 1]
-      value = parsers[param.parserName](m[i], param.parserOpts)
+      parser = parsers[param.parserName]
+      if typeof parser != 'function'
+        parser = defaultParser
+      value = parser(m[i], param.parserOpts)
       if value == null then return null
       extractedArgs[i - 1] = extractedArgs[param.name] = value
     return extractedArgs
@@ -55,7 +72,12 @@ class Compiler
     # Default parsers which take care of parsing/validating arguments.
     @parsers =
       int: (str, opts) ->
-        str = str.trim()
+        str = str.trim().toLowerCase()
+        # Remove leading zeros for comparsion after parsing.
+        for i in [0...str.length - 1]
+          if str.charAt(i) != '0'
+            break
+        str = str.slice(i)
         base = 10
         if opts?.base
           base = opts.base
@@ -63,12 +85,12 @@ class Compiler
         if !isFinite(rv) || rv.toString(base) != str
           return null
         if opts
-          if (isFinite(opts.min) && rv < min) ||
-          (isFinite(opts.max) && rv > max)
+          if (isFinite(opts.min) && rv < opts.min) ||
+          (isFinite(opts.max) && rv > opts.max)
             return null
         return rv
 
-      float: (str, opts) ->
+      number: (str, opts) ->
         str = str.trim()
         rv = parseFloat(str)
         if !isFinite(rv) || rv.toString() != str
@@ -79,16 +101,7 @@ class Compiler
             return null
         return rv
 
-      # Doesn't accept slashes
-      str: (str, opts) ->
-        if str.indexOf('/') != -1
-          return null
-        if opts
-          if (isFinite(opts.len) && rv.length != opts.len) ||
-          (isFinite(opts.minlen) && rv.length < opts.minlen) ||
-          (isFinite(opts.maxlen) && rv.length > opts.maxlen)
-            return null
-        return str
+      str: (str, opts) -> defaultParser(str, opts)
 
       path: (str) -> str
     if parsers
@@ -128,7 +141,7 @@ class Compiler
 
   parseOpts: (rawOpts) ->
     rv = {}
-    while match = @parserOptRe.exec(rawArgs)
+    while match = @parserOptRe.exec(rawOpts)
       name = match[1]
       if match[2] # boolean
         rv[name] = Boolean(match[2])
@@ -153,7 +166,7 @@ class Compiler
           ruleParam.parserName = match[2]
           if match[3]
             # Parser options
-            ruleParam.parserOptions = @parseOpts(match[3])
+            ruleParam.parserOpts = @parseOpts(match[3])
         # Parameter name
         ruleParam.name = match[4]
         extractor.pushParam(ruleParam)
