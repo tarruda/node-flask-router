@@ -307,7 +307,6 @@ describe 'Custom parser', ->
     app.request()
       .get('/transactions/gt=5/lt=10/limit=20')
       .end (res) ->
-        console.log(res.body)
         JSON.parse(res.body).should.eql
           gt: '5'
           lt: '10'
