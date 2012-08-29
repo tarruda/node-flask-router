@@ -314,6 +314,7 @@ module.exports = (parsers) ->
 
   return {
     route: (req, res, next) -> r.route(req, res, next)
+    registerParser: (name, parser) -> compiler.parsers[name] = parser
     get: (pattern, handlers...) -> r.register('GET', pattern, handlers...)
     post: (pattern, handlers...) -> r.register('POST', pattern, handlers...)
     put: (pattern, handlers...) -> r.register('PUT', pattern, handlers...)

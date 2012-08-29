@@ -6,26 +6,27 @@ describe 'Rules', ->
   app = connect()
   app.use(router.route)
 
-  router.get '/$imple/.get/pattern$', (req, res) ->
-    res.write('body1')
-    res.end()
+  before ->
+    router.get '/$imple/.get/pattern$', (req, res) ->
+      res.write('body1')
+      res.end()
 
-  router.post('/not-a-get/pattern*', -> res.end())
+    router.post('/not-a-get/pattern*', -> res.end())
 
-  router.del('/not-a-get/pattern*', -> res.end())
+    router.del('/not-a-get/pattern*', -> res.end())
 
-  router.get '/^pattern/that/uses/many/handlers',
-    (req, res, next) -> res.write('part1'); next(),
-    (req, res, next) -> res.write('part2'); next()
+    router.get '/^pattern/that/uses/many/handlers',
+      (req, res, next) -> res.write('part1'); next(),
+      (req, res, next) -> res.write('part2'); next()
 
-  router.get '/^pattern/that/uses/many/handlers',
-    (req, res) -> res.write('part3'); res.end()
+    router.get '/^pattern/that/uses/many/handlers',
+      (req, res) -> res.write('part3'); res.end()
 
-  router.get '/cancel',
-    (req, res, next) -> res.write('p1'); next(),
-    (req, res, next) -> res.write('p2'); res.end(),
-    (req, res, next) -> res.write('p3'); next(),
-    (req, res, next) -> res.write('p4'); res.end()
+    router.get '/cancel',
+      (req, res, next) -> res.write('p1'); next(),
+      (req, res, next) -> res.write('p2'); res.end(),
+      (req, res, next) -> res.write('p3'); next(),
+      (req, res, next) -> res.write('p4'); res.end()
 
   it 'should match simple patterns', (done) ->
     app.request()
@@ -33,6 +34,7 @@ describe 'Rules', ->
       .end (res) ->
         res.body.should.eql('body1')
         done()
+    return
 
   it "should return 405 when pattern doesn't match method", (done) ->
     app.request()
@@ -285,17 +287,17 @@ describe 'Multiple parameters', ->
 
 
 describe 'Custom parser', ->
-  router = createRouter
-    options: (str) ->
-      rv = {}
-      options = str.split('/')
-      for option in options
-        [key, value] = option.split('=')
-        rv[key] = value
-      return rv
-
+  router = createRouter()
   app = connect()
   app.use(router.route)
+
+  router.registerParser 'options', (str) ->
+    rv = {}
+    options = str.split('/')
+    for option in options
+      [key, value] = option.split('=')
+      rv[key] = value
+    return rv
 
   router.get '/transactions/<options:query>', (req, res) ->
     res.write(JSON.stringify(req.params.query))
@@ -305,6 +307,7 @@ describe 'Custom parser', ->
     app.request()
       .get('/transactions/gt=5/lt=10/limit=20')
       .end (res) ->
+        console.log(res.body)
         JSON.parse(res.body).should.eql
           gt: '5'
           lt: '10'
