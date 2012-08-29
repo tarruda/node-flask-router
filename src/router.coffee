@@ -7,11 +7,11 @@ escapeRegex = (s) -> s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
 
 absoluteUrl = (req, pathname, search) ->
   protocol = 'http'
-  if req.protocol == 'https'
+  if req.headers['x-protocol'] == 'https'
     protocol = 'https'
   rv = [protocol, '://', req.headers.host]
-  if req.port
-    rv.push(":#{req.port}")
+  if port = req.headers['x-port']
+    rv.push(":#{port}")
   rv.push(pathname)
   if search
     rv.push(search)

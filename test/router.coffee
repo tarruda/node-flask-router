@@ -254,11 +254,39 @@ describe 'Accessing branch urls without trailing slash', ->
         res.headers['location'].should.eql(l)
         done()
 
+  it 'should use protocol/port info in the request', (done) ->
+    app.request()
+      .set('Host', 'www.google.com')
+      .set('X-Protocol', 'https')
+      .set('X-Port', 8080)
+      .get('/some/branch/url?var1=val1')
+      .end (res) ->
+        res.statusCode.should.eql(301)
+        l = 'https://www.google.com:8080/some/branch/url/?var1=val1'
+        res.headers['location'].should.eql(l)
+        done()
+
+
+describe 'Multiple parameters', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.get '/<id1>/branch/<int:id2>,<float:id3>/list', (req, res) ->
+    res.write(JSON.stringify(req.params))
+    res.end()
+
+  it 'should keep parameter order', (done) ->
+    app.request()
+      .get('/abc/branch/56,7.7756/list')
+      .end (res) ->
+        JSON.parse(res.body).should.eql(['abc', 56, 7.7756])
+        done()
+
 
 describe 'Custom parser', ->
   router = createRouter
     options: (str) ->
-      console.log str
       rv = {}
       options = str.split('/')
       for option in options
