@@ -180,6 +180,39 @@ describe 'Builtin integer parser', ->
       .expect(404, done)
 
 
+describe "Builtin 'in' parser", ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.get '/posts/<in(t1,t2,t3,true,5.2):tag>', (req, res) ->
+    res.write(JSON.stringify(req.params.tag))
+    res.end()
+
+  it 'should match if arg is inside list', (done) ->
+    app.request()
+      .get('/posts/t1')
+      .end (res) ->
+        JSON.parse(res.body).should.eql('t1')
+        done()
+
+  it 'should not match if arg is outside list', (done) ->
+    app.request()
+      .get('/posts/1')
+      .expect(404, done)
+
+  it 'should convert value if needed', (done) ->
+    app.request()
+      .get('/posts/true')
+      .end (res) ->
+        JSON.parse(res.body).should.eql(true)
+        app.request()
+          .get('/posts/5.2')
+          .end (res) ->
+            JSON.parse(res.body).should.eql(5.2)
+            done()
+
+
 describe 'Accessing branch urls without trailing slash', ->
   router = createRouter()
   app = connect()

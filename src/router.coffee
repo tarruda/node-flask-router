@@ -7,7 +7,7 @@ escapeRegex = (s) -> s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
 
 absoluteUrl = (req, pathname, search) ->
   protocol = 'http'
-  if req.headers['X-Forwarded-Protocol'] == 'https'
+  if req.protocol == 'https'
     protocol = 'https'
   rv = [protocol, '://', req.headers.host]
   if req.port
@@ -37,7 +37,7 @@ class RegexExtractor
 
   extract: (requestPath) ->
     m = @regex.exec(requestPath)
-    if !m then return null
+    if ! m then return null
     return m.slice(1)
 
   test: (requestPath) -> @extract(requestPath) != null
@@ -66,7 +66,7 @@ class RuleExtractor extends RegexExtractor
 
   extract: (requestPath) ->
     m = @regex.exec(requestPath)
-    if !m then return null
+    if ! m then return null
     params = @params
     parsers = @parsers
     extractedArgs = []
@@ -98,7 +98,7 @@ class Compiler
         if opts?.base
           base = opts.base
         rv = parseInt(str, base)
-        if !isFinite(rv) || rv.toString(base) != str
+        if ! isFinite(rv) || rv.toString(base) != str
           return null
         if opts
           if (isFinite(opts.min) && rv < opts.min) ||
@@ -109,7 +109,7 @@ class Compiler
       float: (str, opts) ->
         str = str.trim()
         rv = parseFloat(str)
-        if !isFinite(rv) || rv.toString() != str
+        if ! isFinite(rv) || rv.toString() != str
           return null
         if opts
           if (isFinite(opts.min) && rv < opts.min) ||
@@ -120,6 +120,15 @@ class Compiler
       str: (str, opts) -> defaultParser(str, opts)
 
       path: (str) -> str
+
+      in: (str, opts) ->
+        args = opts['*args']
+        for i in [0...args.length]
+          if args[i].toString() == str then break
+        if i < args.length
+          return args[i]
+        return null
+        
     if parsers
       for own k, v in parsers
         @parsers[k] = v
@@ -142,8 +151,10 @@ class Compiler
 
   parserOptRe:
     ///
-    ([a-zA-Z_][a-zA-Z0-9_]*)        # Capture option name
-    \s*=\s*                         # Delimiters
+    (?:
+        ([a-zA-Z_][a-zA-Z0-9_]*)    # Capture option name
+        \s*=\s*                     # Delimiters
+    )?
     (?:
       (true|false)                  # Capture boolean literal
       |                             # OR
@@ -154,15 +165,20 @@ class Compiler
     ///g
 
   parseOpts: (rawOpts) ->
-    rv = {}
+    rv =
+      '*args': []
     while match = @parserOptRe.exec(rawOpts)
-      name = match[1]
+      name = null
+      if match[1]
+        name = match[1]
       if match[2] # boolean
-        rv[name] = Boolean(match[2])
+        value = Boolean(match[2])
       else if match[3] # number
-        rv[name] = parseFloat(match[3])
+        value = parseFloat(match[3])
       else # string
-        rv[name] = match[4]
+        value = match[4]
+      if name then rv[name] = value # Named argument
+      else rv['*args'].push(value)  # Unamed argument
     return rv
 
   compile: (pattern) ->
