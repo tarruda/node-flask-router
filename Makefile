@@ -12,4 +12,7 @@ compile:
 link: test compile
 	npm link
 
+pack: test compile
+	npm pack
+
 .PHONY: test
