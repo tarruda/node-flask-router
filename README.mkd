@@ -2,6 +2,12 @@
 
   Routing system for node.js/connect based on Flask(http://flask.pocoo.org/).
 
+#### Installation
+
+```sh
+npm install flask-router
+```
+
 #### Usage
 
 ```js
