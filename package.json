@@ -5,7 +5,7 @@
   "main": "./lib/router.js",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/tarruda/node-flask-router.git"
   },
   "keywords": [
     "connect",
