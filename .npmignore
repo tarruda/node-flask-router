@@ -1,0 +1,9 @@
+/node_modules
+/src
+/test
+*.log
+*.swp
+*~
+*.tgz
+README.mkd
+Makefile
