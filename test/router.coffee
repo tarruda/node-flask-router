@@ -1,10 +1,10 @@
 connect = require('connect')
-routers = require('../src/routers')
+createRouter = require('../src/router')
 
 describe 'Static rule matching', ->
-  router = routers()
+  router = createRouter()
   app = connect()
-  app.use(router.middleware)
+  app.use(router.route)
 
   router.get '/$imple/.get/pattern$', (req, res) ->
     res.write('body1')
@@ -45,9 +45,9 @@ describe 'Static rule matching', ->
 
 
 describe 'Builtin string parser', ->
-  router = routers()
+  router = createRouter()
   app = connect()
-  app.use(router.middleware)
+  app.use(router.route)
 
   router.get '/users/<str(max=5,min=2):id>', (req, res) ->
     res.write('range')
@@ -97,9 +97,9 @@ describe 'Builtin string parser', ->
 
 
 describe 'Builtin path parser', ->
-  router = routers()
+  router = createRouter()
   app = connect()
-  app.use(router.middleware)
+  app.use(router.route)
 
   router.get '/pages/<path:page>/edit', (req, res) ->
     res.write(req.params.page)
@@ -121,9 +121,9 @@ describe 'Builtin path parser', ->
 
 
 describe 'Builtin float parser', ->
-  router = routers()
+  router = createRouter()
   app = connect()
-  app.use(router.middleware)
+  app.use(router.route)
 
   router.post '/credit/<float(max=99.99,min=1):amount>', (req, res) ->
     res.write(JSON.stringify(req.params.amount))
@@ -147,9 +147,9 @@ describe 'Builtin float parser', ->
 
 
 describe 'Builtin integer parser', ->
-  router = routers()
+  router = createRouter()
   app = connect()
-  app.use(router.middleware)
+  app.use(router.route)
 
   router.get '/users/<int(base=16,max=255):id>', (req, res) ->
     res.write(JSON.stringify(req.params.id))
@@ -178,3 +178,32 @@ describe 'Builtin integer parser', ->
     app.request()
       .get('/users/50.3')
       .expect(404, done)
+
+
+describe 'Accessing branch urls without trailing slash', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.get '/some/branch/url/', (req, res) ->
+    res.end()
+
+  it 'should redirect to the correct absolute url', (done) ->
+    app.request()
+      .set('Host', 'www.google.com')
+      .get('/some/branch/url')
+      .end (res) ->
+        res.statusCode.should.eql(301)
+        res.headers['location']
+          .should.eql('http://www.google.com/some/branch/url/')
+        done()
+
+  it 'should redirect correctly even with a query string', (done) ->
+    app.request()
+      .set('Host', 'www.google.com')
+      .get('/some/branch/url?var1=val1&var2=val2')
+      .end (res) ->
+        res.statusCode.should.eql(301)
+        l = 'http://www.google.com/some/branch/url/?var1=val1&var2=val2'
+        res.headers['location'].should.eql(l)
+        done()

@@ -5,6 +5,19 @@ url = require('url')
 escapeRegex = (s) -> s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
 
 
+absoluteUrl = (req, pathname, search) ->
+  protocol = 'http'
+  if req.headers['X-Forwarded-Protocol'] == 'https'
+    protocol = 'https'
+  rv = [protocol, '://', req.headers.host]
+  if req.port
+    rv.push(":#{req.port}")
+  rv.push(pathname)
+  if search
+    rv.push(search)
+  return rv.join('')
+
+
 # The most basic parameter parser, which ensures no slashes
 # in the string and can optionally validate string length.
 defaultParser = (str, opts) ->
@@ -18,6 +31,7 @@ defaultParser = (str, opts) ->
   return str
 
 
+# Extracts parameters out of a request path using a user-supplied regex.
 class RegexExtractor
   constructor: (@regex) ->
 
@@ -29,6 +43,8 @@ class RegexExtractor
   test: (requestPath) -> @extract(requestPath) != null
 
 
+# Extracts parameters out of a request path using a user supplied rule
+# with syntax similar to flask routes: http://flask.pocoo.org/.
 class RuleExtractor extends RegexExtractor
   constructor: (@parsers) ->
     @regexParts = ['^']
@@ -65,8 +81,8 @@ class RuleExtractor extends RegexExtractor
     return extractedArgs
     
 
-# Class responsible for transforming user supplied rules into RuleExtractor
-# objects, which will be used to extract arguments from the request path.
+# Translates rules into RuleExtractor objects, which internally uses
+# regexes and parsers to extract parameters.
 class Compiler
   constructor: (parsers) ->
     # Default parsers which take care of parsing/validating arguments.
@@ -108,9 +124,7 @@ class Compiler
       for own k, v in parsers
         @parsers[k] = v
 
-  # Regexes used to parse user-supplied rules with syntax similar to Flask
-  # (python web framework).
-  # Based on the regexes found at
+  # Regexes used to parse rules. Based on the regexes found at:
   # https://github.com/mitsuhiko/werkzeug/blob/master/werkzeug/routing.py
   ruleRe:
     ///
@@ -173,6 +187,9 @@ class Compiler
     return extractor.compile()
 
 
+# Encapsulates the routing logic. It depends on the compiler object,
+# which will transform rules in 'extractors', objects that contain
+# two methods: 'test' and 'extract' used in the routing process.
 class Router
   constructor: (@compiler) ->
     @rules =
@@ -182,17 +199,25 @@ class Router
       DELETE: []
     @compiled = false
 
+
   # Route an incoming request to the appropriate handlers based on matched
-  # rules.
-  dispatch: (req, res, next) ->
-    p = path.normalize(url.parse(req.url).pathname)
+  # rules or regexes.
+  route: (req, res, next) ->
+    if typeof next != 'function'
+      next = (err) ->
+        status = 404
+        if err?.status then status = err.status
+        res.writeHead(status)
+        res.end()
+    urlObj = url.parse(req.url)
+    p = path.normalize(urlObj.pathname)
     req.path = p
     @compileRules()
     ruleArray = @rules[req.method]
-    for route in ruleArray
-      if extracted = route.extractor.extract(p)
+    for rule in ruleArray
+      if extracted = rule.extractor.extract(p)
         req.params = extracted
-        handlerChain = route.handlers
+        handlerChain = rule.handlers
         handle = (i) ->
           if i == handlerChain.length - 1
             n = next
@@ -202,7 +227,15 @@ class Router
           current(req, res, n)
         handle(0)
         return
-    # If no rules were matched, check if the rule is registered
+    # If no rules were matched, see if appending a slash will result
+    # in a match. If so, send a redirect to the correct URL.
+    bp = p + '/'
+    for rule in ruleArray
+      if extracted = rule.extractor.extract(bp)
+        res.writeHead(301, 'Location': absoluteUrl(req, bp, urlObj.search))
+        res.end()
+        return
+    # If still no luck, check if the rule is registered
     # with another http method. If it is, issue the correct 405 response
     allowed = [] # Valid methods for this resource
     for own method, ruleArray of @rules
@@ -258,7 +291,7 @@ module.exports = (parsers) ->
   r = new Router(compiler)
 
   return {
-    middleware: (req, res, next) -> r.dispatch(req, res, next)
+    route: (req, res, next) -> r.route(req, res, next)
     get: (pattern, handlers...) -> r.register('GET', pattern, handlers...)
     post: (pattern, handlers...) -> r.register('POST', pattern, handlers...)
     put: (pattern, handlers...) -> r.register('PUT', pattern, handlers...)

@@ -1,4 +1,4 @@
-TESTS = ./test/support/http.js ./test/routers.coffee
+TESTS = ./test/support/http.js ./test/router.coffee
 
 test:
 	@./node_modules/.bin/mocha --require should --compilers coffee:coffee-script $(TESTS) 
