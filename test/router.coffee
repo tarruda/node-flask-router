@@ -253,3 +253,33 @@ describe 'Accessing branch urls without trailing slash', ->
         l = 'http://www.google.com/some/branch/url/?var1=val1&var2=val2'
         res.headers['location'].should.eql(l)
         done()
+
+
+describe 'Custom parser', ->
+  router = createRouter
+    options: (str) ->
+      console.log str
+      rv = {}
+      options = str.split('/')
+      for option in options
+        [key, value] = option.split('=')
+        rv[key] = value
+      return rv
+
+  app = connect()
+  app.use(router.route)
+
+  router.get '/transactions/<options:query>', (req, res) ->
+    res.write(JSON.stringify(req.params.query))
+    res.end()
+
+  it 'create object containing parsed options', (done) ->
+    app.request()
+      .get('/transactions/gt=5/lt=10/limit=20')
+      .end (res) ->
+        JSON.parse(res.body).should.eql
+          gt: '5'
+          lt: '10'
+          limit: '20'
+        done()
+

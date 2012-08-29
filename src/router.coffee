@@ -130,7 +130,7 @@ class Compiler
         return null
         
     if parsers
-      for own k, v in parsers
+      for own k, v of parsers
         @parsers[k] = v
 
   # Regexes used to parse rules. Based on the regexes found at:
@@ -309,7 +309,7 @@ class Router
 
 
 module.exports = (parsers) ->
-  if not compiler then compiler = new Compiler()
+  if not compiler then compiler = new Compiler(parsers)
   r = new Router(compiler)
 
   return {
