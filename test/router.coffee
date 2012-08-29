@@ -1,7 +1,7 @@
 connect = require('connect')
 createRouter = require('../src/router')
 
-describe 'Static rule matching', ->
+describe 'Rules', ->
   router = createRouter()
   app = connect()
   app.use(router.route)
@@ -20,6 +20,12 @@ describe 'Static rule matching', ->
 
   router.get '/^pattern/that/uses/many/handlers',
     (req, res) -> res.write('part3'); res.end()
+
+  router.get '/cancel',
+    (req, res, next) -> res.write('p1'); next(),
+    (req, res, next) -> res.write('p2'); res.end(),
+    (req, res, next) -> res.write('p3'); next(),
+    (req, res, next) -> res.write('p4'); res.end()
 
   it 'should match simple patterns', (done) ->
     app.request()
@@ -41,6 +47,13 @@ describe 'Static rule matching', ->
       .get('/^pattern/that/uses/many/handlers')
       .end (res) ->
         res.body.should.eql('part1part2part3')
+        done()
+
+  it 'should cancel pipeline when handler ends the request', (done) ->
+    app.request()
+      .get('/cancel')
+      .end (res) ->
+        res.body.should.eql('p1p2')
         done()
 
 

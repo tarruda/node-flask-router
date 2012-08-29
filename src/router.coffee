@@ -233,12 +233,18 @@ class Router
     for rule in ruleArray
       if extracted = rule.extractor.extract(p)
         req.params = extracted
+        end = res.end
+        status =
+          done = false
+        res.end = ->
+          status.done = true
+          end.call(res)
         handlerChain = rule.handlers
         handle = (i) ->
           if i == handlerChain.length - 1
             n = next
           else
-            n = -> process.nextTick(-> handle(i + 1))
+            n = -> process.nextTick(-> handle(i + 1)) if ! status.done
           current = handlerChain[i]
           current(req, res, n)
         handle(0)
