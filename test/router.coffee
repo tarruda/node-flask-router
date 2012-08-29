@@ -274,15 +274,31 @@ describe 'Multiple parameters', ->
   app = connect()
   app.use(router.route)
 
-  router.get '/<id1>/branch/<int:id2>,<float:id3>/list', (req, res) ->
+  handler = (req, res) ->
     res.write(JSON.stringify(req.params))
     res.end()
+
+  router.get('/<id1>/branch/<int:id2>,<float:id3>/list', handler)
+  router.get('/<in(js,css,img):dir>/<path:p>', handler)
 
   it 'should keep parameter order', (done) ->
     app.request()
       .get('/abc/branch/56,7.7756/list')
       .end (res) ->
         JSON.parse(res.body).should.eql(['abc', 56, 7.7756])
+        done()
+
+  it 'should capture parameters in a non-greedy way', (done) ->
+    app.request()
+      .get('/js/some/path/to/a/javascript/file.js')
+      .end (res) ->
+        # Before adjusting the internal regexp for ungreedy matching
+        # this route would not be executed, since it would try to match
+        # 'js/some/path/to/a/javascript' as the first parameter.
+        JSON.parse(res.body).should.eql [
+          'js'
+          'some/path/to/a/javascript/file.js'
+        ]
         done()
 
 

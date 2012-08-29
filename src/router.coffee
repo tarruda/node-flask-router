@@ -56,8 +56,9 @@ class RuleExtractor extends RegexExtractor
   pushParam: (dynamicPart) ->
     @params.push(dynamicPart)
     # Actual parsing/validation is done by the parser function,
-    # so a simple catch-all capture group is inserted
-    @regexParts.push('(.+)')
+    # so a simple non-greedy(since we insert a '$' at the end
+    # before compilation) catch-all capture group is inserted.
+    @regexParts.push('(.+?)')
 
   compile: ->
     @regexParts.push('$')
