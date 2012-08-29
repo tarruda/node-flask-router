@@ -11,12 +11,23 @@ npm install flask-router
 #### Usage
 
 ```js
+var http = require('http')
+  , router = require('flask-router')()
+  , server = http.createServer(router.route);
+```
+
+  It can also be used as a connect/express middleware:
+  
+```js
 var connect = require('connect')
   , app = connect()
-  , router = require('flask-router')();
-
-app.use(router.route);
-
+  , router = require('flask-router')()
+  , app.use(router.route);
+```
+ 
+  Then routes can be added like this:
+  
+```js
 router.get('/users/<str(max=5,min=2):id>', function (req, res) {
   console.log(req.params.id);
   res.end();
