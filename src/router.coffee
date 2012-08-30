@@ -105,9 +105,8 @@ class Compiler
 
       float: (str, opts) ->
         str = str.trim()
+        if str == '' || isNaN(str) then return null
         rv = parseFloat(str)
-        if ! isFinite(rv) || rv.toString() != str
-          return null
         if opts
           if (isFinite(opts.min) && rv < opts.min) ||
           (isFinite(opts.max) && rv > opts.max)
