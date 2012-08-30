@@ -5,5 +5,4 @@
 *.swp
 *~
 *.tgz
-README.mkd
 Makefile

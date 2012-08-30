@@ -47,18 +47,18 @@ router.put('/customers/<id>', function (req, res) {
   Can assign multiple handler functions to the same rule:
 
 ```js
-router.get('/pattern/that/uses/many/handlers'
+router.get('/get/<uuid:id>'
 , function(req, res, next) {
   res.write('part1');
-  return next();
+  next();
 }, function(req, res, next) {
   res.write('part2');
-  return next();
+  next();
 });
 
-router.get('/pattern/that/uses/many/handlers', function(req, res) {
+router.get('/get/<uuid:id>', function(req, res) {
   res.write('part3');
-  return res.end();
+  res.end();
 });
 // All three handlers will be executed when the url match, so the final
 // response will be 'part1part2part3'
@@ -87,6 +87,49 @@ router.get('/queryable/<options:query>', function(req, res) {
 });
 // If '/queryable/gt=5/lt=10/limit=20' was requested,
 // the output would be {"limit":"20","gt":"5","lt":"10"}
+```
+
+  Can be used to write middlewares, just like express routes:
+
+```js
+router.get('/public/<path:file>', function(req, res) {
+  res.write(req.params.file);
+  res.end();
+});
+
+router.all('/private/<path:path>', function(req, res, next) {
+  if (req.headers['x-user']) {
+    req.loggedIn = true;
+    next('route');
+  } else {
+    next();
+  }
+});
+
+router.all('/private/<path:path>', function(req, res) {
+  res.writeHead(401); // not authorized
+  res.end();
+});
+
+router.post('/private/addpost/<title>', function(req, res) {
+  // req.loggedIn === true
+  res.write('post added'));
+  res.end();
+});
+
+router.get('/private/posts', function(req, res) {
+  // req.loggedIn === true
+  res.write(db.query('posts')');
+  res.end();
+});
+```
+
+  RegExps can also be used as rules:
+
+```js
+router.get(/^\/posts\/(\d+)/i, function(req, res) {
+  // Will match /posts/5 or /POSTs/32422
+})
 ```
 
   See tests for more examples.

@@ -370,6 +370,10 @@ describe 'Conditional middlewares', ->
     if req.headers['x-user']
       req.loggedIn = true
       return next('route')
+    else
+      next()
+
+  router.all '/private/<path:path>', (req, res) ->
     res.writeHead(401)
     res.end()
 
