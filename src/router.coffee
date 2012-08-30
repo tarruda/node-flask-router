@@ -18,16 +18,11 @@ absoluteUrl = (req, pathname, search) ->
   return rv.join('')
 
 
-# The most basic parameter parser, which ensures no slashes
-# in the string and can optionally validate string length.
+# The most basic parameter parser, used when no parser is specified. 
+# It only ensures that no slashes will be in the string.
 defaultParser = (str, opts) ->
   if str.indexOf('/') != -1
     return null
-  if opts
-    if (isFinite(opts.len) && str.length != opts.len) ||
-    (isFinite(opts.min) && str.length < opts.min) ||
-    (isFinite(opts.max) && str.length > opts.max)
-      return null
   return str
 
 
@@ -118,7 +113,14 @@ class Compiler
             return null
         return rv
 
-      str: (str, opts) -> defaultParser(str, opts)
+      str: (str, opts) ->
+        if defaultParser(str) == null then return null
+        if opts
+          if (isFinite(opts.len) && str.length != opts.len) ||
+          (isFinite(opts.min) && str.length < opts.min) ||
+          (isFinite(opts.max) && str.length > opts.max)
+            return null
+        return str
 
       path: (str) -> str
 
