@@ -84,18 +84,19 @@ class Compiler
     # Default parsers which take care of parsing/validating arguments.
     @parsers =
       int: (str, opts) ->
-        str = str.trim().toLowerCase()
-        # Remove leading zeros for comparsion after parsing.
-        for i in [0...str.length - 1]
-          if str.charAt(i) != '0'
-            break
-        str = str.slice(i)
         base = 10
-        if opts?.base
-          base = opts.base
+        pattern = /^[0-9]+$/
+        if opts?.base == 2
+          base = 2
+          pattern = /^[0-1]+$/
+        if opts?.base == 8
+          base = 8
+          pattern = /^[0-7]+$/
+        else if opts?.base == 16
+          base = 16
+          pattern = /^[0-9a-fA-F]+$/
+        if ! pattern.test(str) then return null
         rv = parseInt(str, base)
-        if ! isFinite(rv) || rv.toString(base) != str
-          return null
         if opts
           if (isFinite(opts.min) && rv < opts.min) ||
           (isFinite(opts.max) && rv > opts.max)
