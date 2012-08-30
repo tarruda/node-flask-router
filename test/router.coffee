@@ -413,3 +413,25 @@ describe 'Conditional middlewares', ->
           .end (res) ->
             res.statusCode.should.eql(401)
             done()
+
+
+describe 'RegExp rule', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.get /^\/regexPath\/([0-9])$/i, (req, res) ->
+    res.write(req.params[0])
+    res.end()
+
+  it 'should ignore case', (done) ->
+    app.request()
+      .get('/REGEXPATH/5')
+      .end (res) ->
+        res.body.should.eql('5')
+        done()
+
+  it 'should not route when path doesnt match the pattern', (done) ->
+    app.request()
+      .get('/REGEXPATH/56')
+      .expect(404, done)
