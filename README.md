@@ -68,21 +68,21 @@ router.get('/get/<uuid:id>', function(req, res) {
   in Flask/Werkzeug): 
 
 ```js
-router.registerParser('options', function(str) {
+router.registerParser('query', function(str) {
   var rv = {};
-    , options = str.split('/')
+    , queryParams = str.split('/')
     , i, len, kv, key, value;
-  for (i = 0, len = options.length; i < len; i++) {
-    option = options[i];
-    kv = option.split('=');
+  for (i = 0, len = queryParams.length; i < len; i++) {
+    param = queryParams[i];
+    kv = param.split('=');
     key = kv[0], value = kv[1];
     rv[key] = value;
   }
   return rv;
 });
 
-router.get('/queryable/<options:query>', function(req, res) {
-  console.log(JSON.stringify(req.params.query));
+router.get('/queryable/<query:q>', function(req, res) {
+  console.log(JSON.stringify(req.params.q));
   res.end();
 });
 // If '/queryable/gt=5/lt=10/limit=20' was requested,

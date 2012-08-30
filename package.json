@@ -1,7 +1,7 @@
 {
   "author": "Thiago de Arruda <tpadilha84@gmail.com>",
   "name": "flask-router",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Flask-inspired routing system for node and connect.\nNice if you just need a routing system without depending on connect, or need routing middleware without all features provided by express.",
   "main": "./lib/router.js",
   "repository": {
