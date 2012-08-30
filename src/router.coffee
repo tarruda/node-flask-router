@@ -131,6 +131,11 @@ class Compiler
         if i < args.length
           return args[i]
         return null
+
+      uuid: (str) ->
+        if /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(str)
+          return str.toLowerCase()
+        return null
         
     if parsers
       for own k, v of parsers

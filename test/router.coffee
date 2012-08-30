@@ -160,6 +160,34 @@ describe 'Builtin float parser', ->
           .expect(404, done)
 
 
+describe 'Builtin uuid parser', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.get '/users/<uuid:id>', (req, res) ->
+    res.write(req.params.id)
+    res.end()
+
+  it 'should match strings that are uuids', (done) ->
+    app.request()
+      .get('/users/550e8400-e29b-41d4-a716-446655440000')
+      .end (res) ->
+        res.body.should.eql('550e8400-e29b-41d4-a716-446655440000')
+        done()
+
+  it 'should not match strings that are not uuids', (done) ->
+    app.request()
+      .get('/users/550e8400-e29b-41d4-a716-44665544000')
+      .expect(404, done)
+
+  it 'should not care for uppercase letters', (done) ->
+    app.request()
+      .get('/users/550E8400-E29b-41D4-a716-446655440000')
+      .end (res) ->
+        res.body.should.eql('550e8400-e29b-41d4-a716-446655440000')
+        done()
+
 
 describe 'Builtin integer parser', ->
   router = createRouter()
