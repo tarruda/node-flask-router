@@ -92,11 +92,13 @@ router.get('/queryable/<options:query>', function(req, res) {
   Can be used to write middlewares, just like express routes:
 
 ```js
+// anyone can access public files
 router.get('/public/<path:file>', function(req, res) {
   res.write(req.params.file);
   res.end();
 });
 
+// will match any path that starts with /private
 router.all('/private/<path:path>', function(req, res, next) {
   if (req.headers['x-user']) {
     req.loggedIn = true;
@@ -105,12 +107,13 @@ router.all('/private/<path:path>', function(req, res, next) {
     next();
   }
 });
-
 router.all('/private/<path:path>', function(req, res) {
   res.writeHead(401); // not authorized
   res.end();
 });
 
+// the next two handlers will only be executed if the user is
+// authorized(in this case, the request must have x-user header)
 router.post('/private/addpost/<title>', function(req, res) {
   // req.loggedIn === true
   res.write('post added'));
@@ -129,6 +132,9 @@ router.get('/private/posts', function(req, res) {
 ```js
 router.get(/^\/posts\/(\d+)/i, function(req, res) {
   // Will match /posts/5 or /POSTs/32422
+  // captured text can be accessed by index on req.params
+  console.log('Id:', req.params[0])
+  res.end()
 })
 ```
 
