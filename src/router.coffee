@@ -238,46 +238,56 @@ class Router
     req.path = p
     @compileRules()
     ruleArray = @rules[req.method]
-    for rule in ruleArray
+
+    checkRule = (idx) ->
+      if idx == ruleArray.length then return process.nextTick(fail)
+      rule = ruleArray[idx]
       if extracted = rule.extractor.extract(p)
         req.params = extracted
         end = res.end
         status =
-          done = false
+          done: false
         res.end = ->
           status.done = true
           end.call(res)
         handlerChain = rule.handlers
         handle = (i) ->
-          if i == handlerChain.length - 1
-            n = next
-          else
-            n = -> process.nextTick(-> handle(i + 1)) if ! status.done
+          n = (arg) ->
+            if status.done then return
+            if arg == 'route'
+              return process.nextTick(-> checkRule(idx + 1))
+            if i == handlerChain.length - 1 then res.end()
+            else process.nextTick(-> handle(i + 1))
           current = handlerChain[i]
           current(req, res, n)
         handle(0)
-        return
-    # If no rules were matched, see if appending a slash will result
-    # in a match. If so, send a redirect to the correct URL.
-    bp = p + '/'
-    for rule in ruleArray
-      if extracted = rule.extractor.extract(bp)
-        res.writeHead(301, 'Location': absoluteUrl(req, bp, urlObj.search))
+      else process.nextTick(-> checkRule(idx + 1))
+
+    fail = =>
+      # If no rules were matched, see if appending a slash will result
+      # in a match. If so, send a redirect to the correct URL.
+      bp = p + '/'
+      for rule in ruleArray
+        if extracted = rule.extractor.extract(bp)
+          res.writeHead(301, 'Location': absoluteUrl(req, bp, urlObj.search))
+          res.end()
+          return
+      # If still no luck, check if the rule is registered
+      # with another http method. If it is, send a 405 status code
+      allowed = [] # Valid methods for this resource
+      for own method, ruleArray of @rules
+        if method == req.method then continue
+        for rule in ruleArray
+          if rule.extractor.test(p)
+            allowed.push(method)
+            break
+      if allowed.length
+        res.writeHead(405, 'Allow': allowed.join(', '))
         res.end()
         return
-    # If still no luck, check if the rule is registered
-    # with another http method. If it is, issue the correct 405 response
-    allowed = [] # Valid methods for this resource
-    for own method, ruleArray of @rules
-      if method == req.method then continue
-      for rule in ruleArray
-        if rule.extractor.test(p)
-          allowed.push(method)
-    if allowed.length
-      res.writeHead(405, 'Allow': allowed.join(', '))
-      res.end()
-      return
-    next()
+      next()
+
+    checkRule(0)
 
   # Register one of more handler functions to a single route.
   register: (methodName, pattern, handlers...) ->
