@@ -31,7 +31,7 @@ class RegexExtractor
   constructor: (@regex) ->
 
   extract: (requestPath) ->
-    m = @regex.exec(requestPath)
+    m = @regex.exec(if process.platform == 'win32' then requestPath.split('\\').join('/') else requestPath)
     if ! m then return null
     return m.slice(1)
 
@@ -61,7 +61,7 @@ class RuleExtractor extends RegexExtractor
     return @
 
   extract: (requestPath) ->
-    m = @regex.exec(requestPath)
+    m = @regex.exec(if process.platform == 'win32' then requestPath.split('\\').join('/') else requestPath)
     if ! m then return null
     params = @params
     parsers = @parsers
