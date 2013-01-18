@@ -58,6 +58,52 @@ describe 'Rules', ->
         done()
 
 
+describe 'Pathname normalization', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.all /.*/, (req, res) ->
+    res.write(req.path)
+    res.end()
+
+  it 'should normalize parent path expressions(/dir/..)', (done) ->
+    app.request()
+      .get('/a/b/c/..')
+      .expect '/a/b', ->
+        app.request()
+          .get('/a/b/c/../..')
+          .expect '/a', ->
+            app.request()
+              .get('/a/b/c/../../..')
+              .expect '/', ->
+                app.request()
+                  .get('/a/b/c/../../../..')
+                  .expect '/', ->
+                    app.request()
+                      .get('/a/../b/c')
+                      .expect '/b/c', ->
+                        app.request()
+                          .get('/a/../../b/c')
+                          .expect '/b/c', done
+
+  it 'should normalize current path expressions (/./)', (done) ->
+    app.request()
+      .get('/a/b/./c')
+      .expect '/a/b/c', ->
+        app.request()
+          .get('/a/./b')
+          .expect '/a/b', ->
+            app.request()
+              .get('/./a')
+              .expect '/a', ->
+                app.request()
+                  .get('/./')
+                  .expect '/', ->
+                    app.request()
+                      .get('/././')
+                      .expect '/', done
+
 describe 'Builtin string parser', ->
   router = createRouter()
   app = connect()
@@ -459,3 +505,4 @@ describe 'RegExp rule', ->
     app.request()
       .get('/REGEXPATH/56')
       .expect(404, done)
+

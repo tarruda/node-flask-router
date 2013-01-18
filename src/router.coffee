@@ -1,4 +1,3 @@
-path = require('path')
 url = require('url')
 
 
@@ -18,6 +17,15 @@ absoluteUrl = (req, pathname, search) ->
   return rv.join('')
 
 
+normalizePathname = (pathname) ->
+  rv = pathname.replace(/\/\.\//g, '/')
+  while match = /\/[^/][^/]*\/\.\./.exec(rv)
+    rv = rv.replace(match[0], '')
+  rv = rv.replace(/\/\.\./g, '')
+  rv = rv.replace(/\.\//g, '')
+  return rv || '/'
+
+
 # The most basic parameter parser, used when no parser is specified. 
 # It only ensures that no slashes will be in the string.
 defaultParser = (str, opts) ->
@@ -31,7 +39,7 @@ class RegexExtractor
   constructor: (@regex) ->
 
   extract: (requestPath) ->
-    m = @regex.exec(if process.platform == 'win32' then requestPath.split('\\').join('/') else requestPath)
+    m = @regex.exec(requestPath)
     if ! m then return null
     return m.slice(1)
 
@@ -61,7 +69,7 @@ class RuleExtractor extends RegexExtractor
     return @
 
   extract: (requestPath) ->
-    m = @regex.exec(if process.platform == 'win32' then requestPath.split('\\').join('/') else requestPath)
+    m = @regex.exec(requestPath)
     if ! m then return null
     params = @params
     parsers = @parsers
@@ -234,7 +242,7 @@ class Router
         res.writeHead(status)
         res.end()
     urlObj = url.parse(req.url)
-    p = path.normalize(urlObj.pathname)
+    p = normalizePathname(urlObj.pathname)
     req.path = p
     @compileRules()
     ruleArray = @rules[req.method]
