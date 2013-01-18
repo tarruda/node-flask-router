@@ -290,7 +290,7 @@ class Router
     checkRule(0)
 
   # Register one of more handler functions to a single route.
-  register: (methodName, pattern, handlers...) ->
+  register: (prefix, methodName, pattern, handlers...) ->
     ruleArray = @rules[methodName]
     # Only allow rules to be registered before compilation
     if @compiled
@@ -299,7 +299,27 @@ class Router
       throw new Error('Pattern must be rule string or regex')
     # Id used to search for existing rules. That way multiple registrations
     # to the same rule will append to the same handler array.
-    id = pattern.toString()
+    #
+    # The prefix is basically the router method used to register the handler,
+    # so possible prefixes are: 'get', 'post', 'put', 'del' and 'all'.
+    #
+    # This means that while two handlers may be registered to the same
+    # pattern, they will be appended to different rules if the method
+    # used to register them is different. 
+    #
+    # For example, consider a GET request to /starting/path:
+    #
+    # router.all '/starting/path', (req, res, next) ->
+    #   # check some condition then
+    #   next('route')
+    #
+    # router.get '/starting/path', (req, res) ->
+    #   # handle request
+    #
+    # In this above example, next('route') on the first handler
+    # will invoke the other handler even though they use the same
+    # url pattern.
+    id = "#{prefix}##{pattern.toString()}"
     handlerArray = null
     # Check if the rule is already registered in this array.
     for rule in ruleArray
@@ -333,12 +353,16 @@ module.exports = (parsers) ->
   return {
     route: (req, res, next) -> r.route(req, res, next)
     registerParser: (name, parser) -> compiler.parsers[name] = parser
-    get: (pattern, handlers...) -> r.register('GET', pattern, handlers...)
-    post: (pattern, handlers...) -> r.register('POST', pattern, handlers...)
-    put: (pattern, handlers...) -> r.register('PUT', pattern, handlers...)
-    del: (pattern, handlers...) -> r.register('DELETE', pattern, handlers...)
+    get: (pattern, handlers...) ->
+      r.register('get', 'GET', pattern, handlers...)
+    post: (pattern, handlers...) ->
+      r.register('post', 'POST', pattern, handlers...)
+    put: (pattern, handlers...) ->
+      r.register('put', 'PUT', pattern, handlers...)
+    del: (pattern, handlers...) ->
+      r.register('del', 'DELETE', pattern, handlers...)
     all: (pattern, handlers...) ->
       for method in ['GET', 'POST', 'PUT', 'DELETE']
-        r.register(method, pattern, handlers...)
+        r.register('all', method, pattern, handlers...)
       return
   }

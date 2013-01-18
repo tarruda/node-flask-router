@@ -357,6 +357,26 @@ describe 'Custom parser', ->
         done()
 
 
+describe 'Handlers registered on same pattern but by different methods', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.all '/starting/path', (req, res, next) ->
+    next('route')
+
+  router.get '/starting/path', (req, res) ->
+    res.write('matched!')
+    res.end()
+
+  it 'should be treated as separate routes', (done) ->
+    app.request()
+      .get('/starting/path')
+      .end (res) ->
+        res.body.should.eql('matched!')
+        done()
+
+
 describe 'Conditional middlewares', ->
   router = createRouter()
   app = connect()
