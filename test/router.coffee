@@ -27,6 +27,10 @@ describe 'Rules', ->
     (req, res, next) -> res.write('p3'); next(),
     (req, res, next) -> res.write('p4'); res.end()
 
+  router.patch '/patch-route', (req, res) ->
+    res.write('patched!')
+    res.end()
+
   it 'should match simple patterns', (done) ->
     app.request()
       .get('/$imple/.get/pattern$')
@@ -46,16 +50,17 @@ describe 'Rules', ->
   it 'should pipe request through all handlers', (done) ->
     app.request()
       .get('/^pattern/that/uses/many/handlers')
-      .end (res) ->
-        res.body.should.eql('part1part2part3')
-        done()
+      .expect('part1part2part3', done)
 
   it 'should cancel pipeline when handler ends the request', (done) ->
     app.request()
       .get('/cancel')
-      .end (res) ->
-        res.body.should.eql('p1p2')
-        done()
+      .expect('p1p2', done)
+
+  it 'can also be registered to patch methods', (done) ->
+    app.request()
+      .patch('/patch-route')
+      .expect('patched!', done)
 
 
 describe 'Pathname normalization', ->

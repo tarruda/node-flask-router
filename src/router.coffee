@@ -234,6 +234,7 @@ class Router
       POST: []
       PUT: []
       DELETE: []
+      PATCH: []
     @compiled = false
 
 
@@ -390,8 +391,10 @@ module.exports = (parsers) ->
       r.register('put', 'PUT', pattern, handlers...)
     del: (pattern, handlers...) ->
       r.register('del', 'DELETE', pattern, handlers...)
+    patch: (pattern, handlers...) ->
+      r.register('patch', 'PATCH', pattern, handlers...)
     all: (pattern, handlers...) ->
-      for method in ['GET', 'POST', 'PUT', 'DELETE']
+      for method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
         r.register('all', method, pattern, handlers...)
       return handlers
   }

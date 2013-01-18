@@ -2,7 +2,7 @@
 * Module dependencies.
 */
 var EventEmitter = require('events').EventEmitter
-  , methods = ['get', 'post', 'put', 'delete', 'head']
+  , methods = ['get', 'post', 'put', 'delete', 'head', 'patch']
   , connect = require('connect')
   , http = require('http');
 
