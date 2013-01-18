@@ -302,51 +302,46 @@ describe "Builtin 'in' parser", ->
             done()
 
 
-describe 'Optional parts', ->
+describe 'Optional path parser', ->
   router = createRouter()
   app = connect()
   app.use(router.route)
 
-  router.all '/base<path:rest?>', (req, res, next) ->
+  router.all '/base<path(optional=true):rest>', (req, res, next) ->
     if req.params.rest
       # Save the parameters since the match object is reset
       # on each route
       req.rest = req.params.rest
-      req.pipe = 'pipe'
       next('route')
     else
-      res.write('pipe')
+      res.write('/base')
       res.end()
 
   router.get '/base/path1<n>', (req, res) ->
-    res.write(req.pipe)
     res.write(req.params.n)
     res.end()
 
-  router.get '/base/path2/<n?>', (req, res) ->
-    res.write(req.pipe)
-    if req.params.n
-      res.write(req.params.n)
-    else
-      res.write(req.rest)
+  router.get '/base/path2/<n>', (req, res) ->
+    res.write(req.params.n)
+    res.end()
+
+  router.get '/base<path(optional=true):rest>', (req, res) ->
+    res.write(req.path)
     res.end()
 
   it 'should always use base route', (done) ->
     app.request()
       .get('/base/path1a2')
-      .expect 'pipea2', ->
+      .expect 'a2', ->
         app.request()
           .get('/base/path1')
-          .expect 404, ->
+          .expect '/base/path1', ->
             app.request()
-              .get('/base/path2/')
-              .expect 'pipe/path2/', ->
+              .get('/base/path2/3')
+              .expect '3', ->
                 app.request()
-                  .get('/base/path2/3')
-                  .expect 'pipe3', ->
-                    app.request()
-                      .get('/base')
-                      .expect 'pipe', done
+                  .get('/base')
+                  .expect '/base', done
 
 
 describe 'Accessing branch urls without trailing slash', ->
@@ -531,6 +526,34 @@ describe 'Conditional middlewares', ->
           .end (res) ->
             res.statusCode.should.eql(401)
             done()
+
+
+describe 'Chain routes to the same handler', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.get '/a',
+  router.get '/b',
+  router.get '/c',
+  router.get '/',
+    (req, res) ->
+      res.write('handled')
+      res.end()
+
+  it 'is equivalent of registering the handler for each route', (done) ->
+    app.request()
+      .get('/a')
+      .expect 'handled', ->
+        app.request()
+          .get('/b')
+          .expect 'handled', ->
+            app.request()
+              .get('/c')
+              .expect 'handled', ->
+                app.request()
+                  .get('/')
+                  .expect('handled', done)
 
 
 describe 'RegExp rule', ->

@@ -29,7 +29,7 @@ normalizePathname = (pathname) ->
 # The most basic parameter parser, used when no parser is specified. 
 # It only ensures that no slashes will be in the string.
 defaultParser = (str, opts) ->
-  if str.indexOf('/') != -1
+  if typeof str != 'string' || !str.trim() || str.indexOf('/') != -1
     return null
   return str
 
@@ -61,10 +61,7 @@ class RuleExtractor extends RegexExtractor
     # Actual parsing/validation is done by the parser function,
     # so a simple non-greedy(since we insert a '$' at the end
     # before compilation) catch-all capture group is inserted.
-    if dynamicPart.optional
-      @regexParts.push('(.*?)')
-    else
-      @regexParts.push('(.+?)')
+    @regexParts.push('(.*?)')
 
   compile: ->
     @regexParts.push('$')
@@ -78,8 +75,6 @@ class RuleExtractor extends RegexExtractor
     parsers = @parsers
     extractedArgs = []
     for i in [1...m.length]
-      if !m[i] # optional parameter
-        continue
       param = params[i - 1]
       parser = parsers[param.parserName]
       if typeof parser != 'function'
@@ -97,6 +92,8 @@ class Compiler
     # Default parsers which take care of parsing/validating arguments.
     @parsers =
       int: (str, opts) ->
+        if typeof str != 'string' || str.trim() == ''
+          return null
         base = 10
         pattern = /^[0-9]+$/
         if opts?.base == 2
@@ -117,8 +114,8 @@ class Compiler
         return rv
 
       float: (str, opts) ->
-        str = str.trim()
-        if str == '' || isNaN(str) then return null
+        if typeof str != 'string' || str.trim() == '' || isNaN(str)
+          return null
         rv = parseFloat(str)
         if opts
           if (isFinite(opts.min) && rv < opts.min) ||
@@ -135,7 +132,10 @@ class Compiler
             return null
         return str
 
-      path: (str) -> str
+      path: (str, opts) ->
+        if str || opts.optional
+          return str
+        return null
 
       in: (str, opts) ->
         args = opts['*args']
@@ -158,31 +158,30 @@ class Compiler
   # https://github.com/mitsuhiko/werkzeug/blob/master/werkzeug/routing.py
   ruleRe:
     ///
-    ([^<]+)                                       # Static rule section
-    |                                             # OR        
-    (?:<                                          # Dynamic rule section:
-      (?:                                           
-        ([a-zA-Z_][a-zA-Z0-9_]*)                  # Capture onverter name
-          (?:\((.+)\))?                           # Capture parser options
-        :                                         
-      )?                                          # Parser/opts is optional
-      ([a-zA-Z_][a-zA-Z0-9_]*)                    # Capture parameter name
-      (\?)?                                       # Optional
-    >)                                             
+    ([^<]+)                           # Static rule section
+    |                                 # OR        
+    (?:<                              # Dynamic rule section:
+      (?:                               
+        ([a-zA-Z_][a-zA-Z0-9_]*)      # Capture onverter name
+          (?:\((.+)\))?               # Capture parser options
+        :                             
+      )?                              # Parser/opts is optional
+      ([a-zA-Z_][a-zA-Z0-9_]*)        # Capture parameter name
+    >)                                 
     ///g
 
   parserOptRe:
     ///
     (?:
-        ([a-zA-Z_][a-zA-Z0-9_]*)                  # Capture option name
-        \s*=\s*                                   # Delimiters
+        ([a-zA-Z_][a-zA-Z0-9_]*)      # Capture option name
+        \s*=\s*                       # Delimiters
     )?
     (?:
-      (true|false)                                # Capture boolean literal
-      |                                           # OR
-      (\d+\.\d+|\d+\.|\d+)                        # Capture numeric literal OR
-      |                                           # OR
-      (\w+)                                       # Capture string literal 
+      (true|false)                    # Capture boolean literal
+      |                               # OR
+      (\d+\.\d+|\d+\.|\d+)            # Capture numeric literal OR
+      |                               # OR
+      (\w+)                           # Capture string literal 
     )\s*,?
     ///g
 
@@ -221,9 +220,6 @@ class Compiler
             ruleParam.parserOpts = @parseOpts(match[3])
         # Parameter name
         ruleParam.name = match[4]
-        # Existential quantifier
-        if match[5]
-          ruleParam.optional = true
         extractor.pushParam(ruleParam)
     return extractor.compile()
 
@@ -361,7 +357,14 @@ class Router
         handlers: handlerArray
     # Register the passed handlers to the handler array associated with
     # this rule.
-    handlerArray.push(handlers...)
+    for handler in handlers
+      if typeof handler == 'function'
+        handlerArray.push(handler)
+      else if Array.isArray(handler)
+        @register.apply(@, [prefix, methodName, pattern].concat(handler))
+      else
+        throw new Error('Handler must be a function or array of functions')
+    return handlers
 
   # Compiles all rules
   compileRules: ->
@@ -390,5 +393,5 @@ module.exports = (parsers) ->
     all: (pattern, handlers...) ->
       for method in ['GET', 'POST', 'PUT', 'DELETE']
         r.register('all', method, pattern, handlers...)
-      return
+      return handlers
   }
