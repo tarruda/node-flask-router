@@ -104,6 +104,7 @@ describe 'Pathname normalization', ->
                       .get('/././')
                       .expect '/', done
 
+
 describe 'Builtin string parser', ->
   router = createRouter()
   app = connect()
@@ -299,6 +300,53 @@ describe "Builtin 'in' parser", ->
           .end (res) ->
             JSON.parse(res.body).should.eql(5.2)
             done()
+
+
+describe 'Optional parts', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.all '/base<path:rest?>', (req, res, next) ->
+    if req.params.rest
+      # Save the parameters since the match object is reset
+      # on each route
+      req.rest = req.params.rest
+      req.pipe = 'pipe'
+      next('route')
+    else
+      res.write('pipe')
+      res.end()
+
+  router.get '/base/path1<n>', (req, res) ->
+    res.write(req.pipe)
+    res.write(req.params.n)
+    res.end()
+
+  router.get '/base/path2/<n?>', (req, res) ->
+    res.write(req.pipe)
+    if req.params.n
+      res.write(req.params.n)
+    else
+      res.write(req.rest)
+    res.end()
+
+  it 'should always use base route', (done) ->
+    app.request()
+      .get('/base/path1a2')
+      .expect 'pipea2', ->
+        app.request()
+          .get('/base/path1')
+          .expect 404, ->
+            app.request()
+              .get('/base/path2/')
+              .expect 'pipe/path2/', ->
+                app.request()
+                  .get('/base/path2/3')
+                  .expect 'pipe3', ->
+                    app.request()
+                      .get('/base')
+                      .expect 'pipe', done
 
 
 describe 'Accessing branch urls without trailing slash', ->

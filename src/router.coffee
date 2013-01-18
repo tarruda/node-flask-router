@@ -61,7 +61,10 @@ class RuleExtractor extends RegexExtractor
     # Actual parsing/validation is done by the parser function,
     # so a simple non-greedy(since we insert a '$' at the end
     # before compilation) catch-all capture group is inserted.
-    @regexParts.push('(.+?)')
+    if dynamicPart.optional
+      @regexParts.push('(.*?)')
+    else
+      @regexParts.push('(.+?)')
 
   compile: ->
     @regexParts.push('$')
@@ -75,6 +78,8 @@ class RuleExtractor extends RegexExtractor
     parsers = @parsers
     extractedArgs = []
     for i in [1...m.length]
+      if !m[i] # optional parameter
+        continue
       param = params[i - 1]
       parser = parsers[param.parserName]
       if typeof parser != 'function'
@@ -153,30 +158,31 @@ class Compiler
   # https://github.com/mitsuhiko/werkzeug/blob/master/werkzeug/routing.py
   ruleRe:
     ///
-    ([^<]+)                         # Static rule section
-    |                               # OR        
-    (?:<                            # Dynamic rule section:
-      (?:                             
-        ([a-zA-Z_][a-zA-Z0-9_]*)    # Capture onverter name
-          (?:\((.+)\))?             # Capture parser options
-        :                           
-      )?                            # Parser/opts is optional           
-      ([a-zA-Z_][a-zA-Z0-9_]*)      # Capture parameter name
-    >)                               
+    ([^<]+)                                       # Static rule section
+    |                                             # OR        
+    (?:<                                          # Dynamic rule section:
+      (?:                                           
+        ([a-zA-Z_][a-zA-Z0-9_]*)                  # Capture onverter name
+          (?:\((.+)\))?                           # Capture parser options
+        :                                         
+      )?                                          # Parser/opts is optional
+      ([a-zA-Z_][a-zA-Z0-9_]*)                    # Capture parameter name
+      (\?)?                                       # Optional
+    >)                                             
     ///g
 
   parserOptRe:
     ///
     (?:
-        ([a-zA-Z_][a-zA-Z0-9_]*)    # Capture option name
-        \s*=\s*                     # Delimiters
+        ([a-zA-Z_][a-zA-Z0-9_]*)                  # Capture option name
+        \s*=\s*                                   # Delimiters
     )?
     (?:
-      (true|false)                  # Capture boolean literal
-      |                             # OR
-      (\d+\.\d+|\d+\.|\d+)          # Capture numeric literal OR
-      |                             # OR
-      (\w+)                         # Capture string literal 
+      (true|false)                                # Capture boolean literal
+      |                                           # OR
+      (\d+\.\d+|\d+\.|\d+)                        # Capture numeric literal OR
+      |                                           # OR
+      (\w+)                                       # Capture string literal 
     )\s*,?
     ///g
 
@@ -215,6 +221,9 @@ class Compiler
             ruleParam.parserOpts = @parseOpts(match[3])
         # Parameter name
         ruleParam.name = match[4]
+        # Existential quantifier
+        if match[5]
+          ruleParam.optional = true
         extractor.pushParam(ruleParam)
     return extractor.compile()
 
@@ -246,11 +255,13 @@ class Router
     req.path = p
     @compileRules()
     ruleArray = @rules[req.method]
+    matchedRules = {}
 
     checkRule = (idx) ->
       if idx == ruleArray.length then return process.nextTick(fail)
       rule = ruleArray[idx]
       if extracted = rule.extractor.extract(p)
+        matchedRules[rule.id] = 1
         req.params = extracted
         end = res.end
         status =
@@ -269,7 +280,8 @@ class Router
           current = handlerChain[i]
           current(req, res, n)
         handle(0)
-      else process.nextTick(-> checkRule(idx + 1))
+      else
+        process.nextTick(-> checkRule(idx + 1))
 
     fail = =>
       # If no rules were matched, see if appending a slash will result
@@ -277,6 +289,9 @@ class Router
       bp = p + '/'
       for rule in ruleArray
         if extracted = rule.extractor.extract(bp)
+          # ignore if the rule already matched on a pipeline
+          if rule.id of matchedRules
+            continue
           res.writeHead(301, 'Location': absoluteUrl(req, bp, urlObj.search))
           res.end()
           return
@@ -287,6 +302,9 @@ class Router
         if method == req.method then continue
         for rule in ruleArray
           if rule.extractor.test(p)
+            # ignore if the rule already matched on a pipeline
+            if rule.id of matchedRules
+              continue
             allowed.push(method)
             break
       if allowed.length
