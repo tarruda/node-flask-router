@@ -263,9 +263,9 @@ class Router
         end = res.end
         status =
           done: false
-        res.end = ->
+        res.end = (args...) ->
           status.done = true
-          end.call(res)
+          end.apply(res, args)
         handlerChain = rule.handlers
         handle = (i) ->
           n = (arg) ->
