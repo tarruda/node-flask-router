@@ -1,5 +1,8 @@
 connect = require('connect')
 createRouter = require('../src/router')
+require('should')
+
+Request = require('./support/http')
 
 describe 'Rules', ->
   router = createRouter()
