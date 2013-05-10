@@ -611,7 +611,23 @@ describe 'router.use', ->
     app.request()
       .get('/test/url')
       .end (res) ->
-        res.body.should.eql('/url')
+        res.body.should.eql '/url'
         done()
 
-   
+describe 'res.answer', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.get '/', (req, res) ->
+    res.answer(234, {data: 'data'})
+
+  it 'should answer with code 234 and json', (done) ->
+     app.request()
+      .get('/')
+      .end (res) ->
+        console.log res
+        res.statusCode.should.eql 234
+        res.body.should.eql JSON.stringify({data:'data'})
+        done()
+

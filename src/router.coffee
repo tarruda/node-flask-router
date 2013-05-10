@@ -3,6 +3,8 @@ Compiler = require('./compiler')
 
 url = require('url')
 
+send = require('./send')
+
 absoluteUrl = (req, pathname, search) ->
   protocol = 'http'
   if req.headers['x-protocol'] == 'https'
@@ -55,12 +57,12 @@ class Router
         - req.url.length)
 
     # support an extended res.send
-    #res.send = (code, headers, data) ->
-    #  args = send.arguments(code, headers, data)
-    #  res.writeHead(args.code, args.headers)
-    #  if (null != args.data)
-    #    res.write(args.data)
-    #  @end()
+    res.answer = (code, headers, data) ->
+      args = send.arguments(code, headers, data)
+      res.writeHead(args.code, args.headers)
+      if (null != args.data)
+        res.write(args.data)
+      @end()
 
 
     urlObj = url.parse(req.url)
