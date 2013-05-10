@@ -5,12 +5,12 @@ exports.arguments = (code, headers, data) ->
     data = headers
     headers = {}
   # .send(data)
-  if (null == data && typeof(code) != 'number')
+  if (!data? && typeof(code) != 'number')
     data = code
     code = 200
-  if (typeof(data) == 'string') 
+  if (typeof(data) == 'string')
     ctype = 'text/html; charset=utf-8'
-  else if (data instanceof Error) 
+  else if (data instanceof Error)
     code = data.code || 500
     ctype = 'application/json'
     ans = {message: data.message}

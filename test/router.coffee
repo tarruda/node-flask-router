@@ -626,7 +626,6 @@ describe 'res.answer', ->
      app.request()
       .get('/')
       .end (res) ->
-        console.log res
         res.statusCode.should.eql 234
         res.body.should.eql JSON.stringify({data:'data'})
         done()
