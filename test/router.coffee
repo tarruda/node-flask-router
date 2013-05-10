@@ -585,3 +585,33 @@ describe 'RegExp rule', ->
       .get('/REGEXPATH/56')
       .expect(404, done)
 
+describe 'res.end(data)', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+  router.get '/', (req, res) ->
+    res.end('data')
+  it 'should write the data', (done) ->
+    app.request()
+      .get('/')
+      .end (res) ->
+        res.body.should.eql('data')
+        done()
+
+
+describe 'router.use', ->
+  router = createRouter()
+  app = connect()
+  app.use(router.route)
+
+  router.use '/test', (req, res) ->
+    res.end(req.url)
+
+  it 'should modify the url', (done) ->
+    app.request()
+      .get('/test/url')
+      .end (res) ->
+        res.body.should.eql('/url')
+        done()
+
+   

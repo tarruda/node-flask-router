@@ -48,6 +48,21 @@ class Router
         if err?.status then status = err.status
         res.writeHead(status)
         res.end()
+    
+    # support usePath
+    req.usePath = req.originalUrl
+      .substr(0, req.originalUrl.length
+        - req.url.length)
+
+    # support an extended res.send
+    #res.send = (code, headers, data) ->
+    #  args = send.arguments(code, headers, data)
+    #  res.writeHead(args.code, args.headers)
+    #  if (null != args.data)
+    #    res.write(args.data)
+    #  @end()
+
+
     urlObj = url.parse(req.url)
     p = normalizePathname(urlObj.pathname)
     req.path = p
@@ -196,5 +211,16 @@ module.exports = (parsers) ->
     all: (pattern, handlers...) ->
       for method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
         r.register('all', method, pattern, handlers...)
+      return handlers
+    use: (usepath, handlers...) ->
+      if (!handlers.length) 
+        handlers = [usepath]
+        usepath = '/'
+      if (usepath.slice(-1) != '/')
+        usepath += '/'
+      handlers.unshift (req, res, next) ->
+        req.url = '/' + req.params.__path
+        next()
+      @all("#{usepath}<path:__path>", handlers...)
       return handlers
   }
