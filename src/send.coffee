@@ -17,7 +17,7 @@ exports.arguments = (code, headers, data) ->
     if (process.env['NODE_ENV'] == 'development')
       ans.stack = data.stack
     data = JSON.stringify(ans)
-  else if (null != data && !(data instanceof Buffer))
+  else if (data? && !(data instanceof Buffer))
     ctype = 'application/json'
     data = JSON.stringify(data)
     
